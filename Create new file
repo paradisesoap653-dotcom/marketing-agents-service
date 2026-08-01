@@ -1,0 +1,5 @@
+crewai
+langchain-google-genai
+pydantic
+fastapi
+uvicorn
