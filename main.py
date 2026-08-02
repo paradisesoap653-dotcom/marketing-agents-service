@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from google import genai
 
+# جلب المفتاح من متغيرات البيئة
 api_key = os.getenv("GEMINI_API_KEY")
 
 app = FastAPI(title="Marketing Service")
@@ -21,6 +22,7 @@ def run_campaign(request: CampaignRequest):
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
 
     try:
+        # إنشاء العميل باستخدام المكتبة الجديدة google-genai
         client = genai.Client(api_key=api_key)
 
         prompt = f"""
@@ -30,6 +32,7 @@ def run_campaign(request: CampaignRequest):
         شامل الهاشتاجات المناسبة.
         """
 
+        # الاستدعاء الصحيح وفقاً للمكتبة الحديثة
         response = client.models.generate_content(
             model='gemini-2.0-flash',
             contents=prompt,
