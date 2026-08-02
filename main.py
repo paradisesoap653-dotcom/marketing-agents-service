@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from crewai import Agent, Task, Crew, Process
+from crewai import Agent, Task, Crew, Process, LLM
 
 app = FastAPI(title="Marketing Agents Service")
 
@@ -17,22 +17,29 @@ def home():
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
     try:
-        # 1. تعريف وكيل التسويق
+        # 1. إعداد نموذج Gemini صراحةً
+        gemini_llm = LLM(
+            model="gemini/gemini-1.5-flash",
+            api_key=os.getenv("GEMINI_API_KEY")
+        )
+
+        # 2. تعريف وكيل التسويق وتمرير النموذج له
         marketer = Agent(
             role='خبير تسويق رقمي',
             goal=f'إنشاء خطة تسويقية جذابة لمنتج {request.product_name}',
             backstory='أنت خبير محترف في كتابة الحملات الإعلانية وجذب الجمهور المستهدف.',
-            verbose=True
+            verbose=True,
+            llm=gemini_llm
         )
 
-        # 2. تحديد المهمة
+        # 3. تحديد المهمة
         task = Task(
             description=f'قم بكتابة منشور تسويقي مبتكر لمنتج {request.product_name} موجه لـ {request.target_audience}.',
             expected_output='منشور إعلاني مكتمل وجاهز للنشر مع الهاشتاجات المناسبة.',
             agent=marketer
         )
 
-        # 3. تشغيل الفريق
+        # 4. تشغيل الفريق
         crew = Crew(
             agents=[marketer],
             tasks=[task],
