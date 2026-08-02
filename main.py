@@ -3,11 +3,11 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from crewai import Agent, Task, Crew, Process, LLM
+from crewai import Agent, Task, Crew, Process
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 app = FastAPI(title="Marketing Agents Service")
 
-# Executor لمنع تجميد FastAPI أو حدوث Timeout (502)
 executor = ThreadPoolExecutor(max_workers=3)
 
 class CampaignRequest(BaseModel):
@@ -19,10 +19,10 @@ def home():
     return {"status": "Marketing Agents Service is running online!"}
 
 def execute_crew(product_name: str, target_audience: str):
-    # إعداد Gemini عبر CrewAI المحدث
-    gemini_llm = LLM(
-        model="gemini/gemini-1.5-flash",
-        api_key=os.getenv("GEMINI_API_KEY")
+    # الربط المباشر المضمون عبر LangChain وتخطي LiteLLM
+    gemini_llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        google_api_key=os.getenv("GEMINI_API_KEY")
     )
 
     marketer = Agent(
