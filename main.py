@@ -17,9 +17,9 @@ def home():
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
     try:
-        # 1. إعداد نموذج Gemini صراحةً
+        # 1. إعداد نموذج Gemini بالتنسيق الصحيح
         gemini_llm = LLM(
-            model="gemini/gemini-1.5-flash",
+            model="gemini/gemini-2.5-flash",
             api_key=os.getenv("GEMINI_API_KEY")
         )
 
