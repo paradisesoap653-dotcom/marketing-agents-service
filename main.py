@@ -20,7 +20,6 @@ def run_campaign(request: CampaignRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
 
-    # إنشاء العميل
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
@@ -30,11 +29,11 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    # أسماء النماذج المجانية بالصيغة المعتمدة رسمياً
+    # إضافة البادئة المباشرة models/ المعرفية لـ v1beta
     candidate_models = [
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-pro'
+        'models/gemini-1.5-flash',
+        'models/gemini-1.5-pro',
+        'models/gemini-2.0-flash'
     ]
 
     errors = []
