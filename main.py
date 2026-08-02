@@ -29,19 +29,16 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    # جرب النماذج الأكثر استقراراً في الخطة المجانية
-    for model_name in ['gemini-2.5-flash', 'gemini-2.5-flash-lite']:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-            )
-            return {
-                "success": True, 
-                "model_used": model_name,
-                "result": response.text
-            }
-        except Exception:
-            continue
-
-    raise HTTPException(status_code=429, detail="تم تجاوز الكوتا المجانية مؤقتاً، يرجى المحاولة بعد 15 ثانية.")
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        return {
+            "success": True, 
+            "model_used": "gemini-2.5-flash",
+            "result": response.text
+        }
+    except Exception as e:
+        # إرجاع الخطأ الحقيقي القادم من Google لنعرف السبب تماماً
+        raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
