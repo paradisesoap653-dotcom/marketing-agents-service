@@ -29,16 +29,29 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    try:
-        # التغيير هنا إلى gemini-1.5-flash المتاح مجاناً بكوتا مفتوحة
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt,
-        )
-        return {
-            "success": True, 
-            "model_used": "gemini-1.5-flash",
-            "result": response.text
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
+    # قائمة النماذج لتجربتها بالتتابع حتى ينجح أحدها
+    candidate_models = [
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash'
+    ]
+
+    last_error = None
+
+    for model_name in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+            )
+            return {
+                "success": True, 
+                "model_used": model_name,
+                "result": response.text
+            }
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    raise HTTPException(status_code=500, detail=f"Google API Error: {last_error}")
