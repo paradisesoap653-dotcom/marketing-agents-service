@@ -20,6 +20,7 @@ def run_campaign(request: CampaignRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
 
+    # إنشاء العميل
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
@@ -29,15 +30,14 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    # قائمة النماذج لتجربتها بالتتابع حتى ينجح أحدها
+    # أسماء النماذج المجانية بالصيغة المعتمدة رسمياً
     candidate_models = [
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash-8b',
         'gemini-1.5-flash',
-        'gemini-2.0-flash'
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-pro'
     ]
 
-    last_error = None
+    errors = []
 
     for model_name in candidate_models:
         try:
@@ -51,7 +51,7 @@ def run_campaign(request: CampaignRequest):
                 "result": response.text
             }
         except Exception as e:
-            last_error = str(e)
+            errors.append(f"{model_name}: {str(e)}")
             continue
 
-    raise HTTPException(status_code=500, detail=f"Google API Error: {last_error}")
+    raise HTTPException(status_code=500, detail=f"Google API Errors: { ' | '.join(errors) }")
