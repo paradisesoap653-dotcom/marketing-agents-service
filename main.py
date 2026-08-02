@@ -11,8 +11,8 @@ app = FastAPI(title="Marketing Agents Service")
 executor = ThreadPoolExecutor(max_workers=3)
 
 class CampaignRequest(BaseModel):
-    product_name: str
-    target_audience: str
+    product_name:str
+    target_audience:str
 
 @app.get("/")
 def home():
