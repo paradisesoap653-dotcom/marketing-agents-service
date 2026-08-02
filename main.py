@@ -19,7 +19,7 @@ def home():
     return {"status": "Marketing Agents Service is running online!"}
 
 def execute_crew(product_name: str, target_audience: str):
-    # الربط المباشر المضمون عبر LangChain وتخطي LiteLLM
+    # الربط المباشر المضمون مع Gemini عبر LangChain
     gemini_llm = ChatGoogleGenerativeAI(
         model="gemini-1.5-flash",
         google_api_key=os.getenv("GEMINI_API_KEY")
