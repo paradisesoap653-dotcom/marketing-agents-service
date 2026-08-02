@@ -30,15 +30,15 @@ def run_campaign(request: CampaignRequest):
     """
 
     try:
+        # استخدام الموديل المعتمد والمتاح حالياً
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=prompt,
         )
         return {
             "success": True, 
-            "model_used": "gemini-2.5-flash",
+            "model_used": "gemini-2.0-flash",
             "result": response.text
         }
     except Exception as e:
-        # إرجاع الخطأ الحقيقي القادم من Google لنعرف السبب تماماً
         raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
