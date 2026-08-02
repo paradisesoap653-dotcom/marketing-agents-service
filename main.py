@@ -5,6 +5,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from crewai import Agent, Task, Crew, Process, LLM
 
+# ضبط مفتاح Gemini بكافة الأشكال التي قد تطلبها LiteLLM
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    os.environ["GEMINI_API_KEY"] = api_key
+    os.environ["GOOGLE_API_KEY"] = api_key
+
 app = FastAPI(title="Marketing Agents Service")
 
 executor = ThreadPoolExecutor(max_workers=3)
@@ -18,10 +24,10 @@ def home():
     return {"status": "Marketing Agents Service is running online!"}
 
 def execute_crew(product_name: str, target_audience: str):
-    # إعداد نموذج Gemini متوافق 100% مع معايير CrewAI الحديثة
+    # استخدام اسم الموديل المباشر
     gemini_llm = LLM(
-        model="gemini/gemini-1.5-flash",
-        api_key=os.getenv("GEMINI_API_KEY")
+        model="gemini-1.5-flash", 
+        api_key=api_key
     )
 
     marketer = Agent(
