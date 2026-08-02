@@ -1,11 +1,11 @@
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 
+# إنشاء الـ Client باستخدام الحزمة الرسمية الجديدة
 api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key) if api_key else None
 
 app = FastAPI(title="Marketing Service")
 
@@ -19,10 +19,10 @@ def home():
 
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في إعدادات البيئة.")
+
     try:
-        # استخدام الاسم المعتمد والمستقر للنسخ المجانية
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        
         prompt = f"""
         أنت خبير تسويق رقمي محترف. 
         قم بكتابة منشور تسويقي مبتكر وجذاب لمنتج: {request.product_name}
@@ -30,7 +30,11 @@ def run_campaign(request: CampaignRequest):
         شامل الهاشتاجات المناسبة.
         """
         
-        response = model.generate_content(prompt)
+        # استخدام الموديل المستقر المعتمد حالياً gemini-2.0-flash
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt,
+        )
         
         return {
             "success": True, 
@@ -38,13 +42,5 @@ def run_campaign(request: CampaignRequest):
         }
 
     except Exception as e:
-        # إذا تعذر gemini-1.5-flash-latest، نجرّب gemini-1.5-pro-latest كبديل احتياطي
-        try:
-            fallback_model = genai.GenerativeModel('gemini-1.5-pro-latest')
-            response = fallback_model.generate_content(prompt)
-            return {
-                "success": True, 
-                "result": response.text
-            }
-        except Exception as fallback_error:
-            raise HTTPException(status_code=500, detail=str(fallback_error))
+        print(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
