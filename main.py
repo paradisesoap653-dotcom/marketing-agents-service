@@ -20,18 +20,8 @@ def home():
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
     try:
-        # البحث عن نموذج يعمل تلقائياً لتفادي أخطاء الـ 404
-        available_models = [
-            m.name for m in genai.list_models() 
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        
-        if not available_models:
-            raise Exception("لم يتم العثور على أي نموذج داعم للإنشاء بنفس المفتاح.")
-            
-        # اختيار أول نموذج متاح (مثل models/gemini-1.5-flash أو الأحدث)
-        selected_model_name = available_models[0]
-        model = genai.GenerativeModel(selected_model_name)
+        # استخدام الاسم المعتمد والمستقر للنسخ المجانية
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         prompt = f"""
         أنت خبير تسويق رقمي محترف. 
@@ -44,10 +34,17 @@ def run_campaign(request: CampaignRequest):
         
         return {
             "success": True, 
-            "used_model": selected_model_name,
             "result": response.text
         }
 
     except Exception as e:
-        print(f"Error details: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # إذا تعذر gemini-1.5-flash-latest، نجرّب gemini-1.5-pro-latest كبديل احتياطي
+        try:
+            fallback_model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            response = fallback_model.generate_content(prompt)
+            return {
+                "success": True, 
+                "result": response.text
+            }
+        except Exception as fallback_error:
+            raise HTTPException(status_code=500, detail=str(fallback_error))
