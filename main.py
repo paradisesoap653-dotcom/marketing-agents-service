@@ -1,12 +1,12 @@
 import os
-import time
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from google import genai
-from google.genai.errors import APIError
+import google.generativeai as genai
 
+# إعداد المفتاح
 api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key) if api_key else None
+if api_key:
+    genai.configure(api_key=api_key)
 
 app = FastAPI(title="Marketing Service")
 
@@ -20,8 +20,15 @@ def home():
 
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
-    if not client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في إعدادات البيئة.")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
+
+    # القائمة بالنماذج المعتمدة المتاحة حالياً بالترتيب
+    models_to_try = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-pro'
+    ]
 
     prompt = f"""
     أنت خبير تسويق رقمي محترف. 
@@ -30,39 +37,19 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    # قائمة الموديلات مرتبة حسب الأولوية للتراجع عند وجود Quota limit
-    candidate_models = [
-        'gemini-1.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-pro'
-    ]
-
     last_error = None
 
-    for model_name in candidate_models:
+    for model_name in models_to_try:
         try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-            )
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
             return {
-                "success": True,
-                "used_model": model_name,
+                "success": True, 
+                "model_used": model_name,
                 "result": response.text
             }
-        except APIError as e:
-            last_error = e
-            # إذا كان الخطأ 429 (Quota Exhausted) نجرب الموديل التالي مباشرة
-            if e.code == 429:
-                continue
-            else:
-                raise HTTPException(status_code=500, detail=f"API Error ({model_name}): {str(e)}")
         except Exception as e:
-            last_error = e
+            last_error = str(e)
             continue
 
-    # في حال فشل جميع الموديلات بسبب Quota Limit
-    raise HTTPException(
-        status_code=429, 
-        detail=f"تجاوز حدود الاستخدام لجميع النماذج المجانية. يرجى محاولة إنشاء مفتاح API جديد من Google AI Studio أو الانتظار قليلاً. التفاصيل: {str(last_error)}"
-    )
+    raise HTTPException(status_code=500, detail=f"فشلت كافة المحاولات. آخر خطأ: {last_error}")
