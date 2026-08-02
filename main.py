@@ -30,14 +30,14 @@ def run_campaign(request: CampaignRequest):
     """
 
     try:
-        # استخدام الموديل المعتمد والمتاح حالياً
+        # التغيير هنا إلى gemini-1.5-flash المتاح مجاناً بكوتا مفتوحة
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
         )
         return {
             "success": True, 
-            "model_used": "gemini-2.0-flash",
+            "model_used": "gemini-1.5-flash",
             "result": response.text
         }
     except Exception as e:
