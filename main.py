@@ -1,12 +1,9 @@
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 
-# إعداد المفتاح
 api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
 
 app = FastAPI(title="Marketing Service")
 
@@ -21,35 +18,29 @@ def home():
 @app.post("/run-campaign")
 def run_campaign(request: CampaignRequest):
     if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في Environment Variables")
 
-    # القائمة بالنماذج المعتمدة المتاحة حالياً بالترتيب
-    models_to_try = [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-pro'
-    ]
+    try:
+        # استخدام المكتبة والعميل الحديثين 2026
+        client = genai.Client(api_key=api_key)
 
-    prompt = f"""
-    أنت خبير تسويق رقمي محترف. 
-    قم بكتابة منشور تسويقي مبتكر وجذاب لمنتج: {request.product_name}
-    الجمهور المستهدف: {request.target_audience}
-    شامل الهاشتاجات المناسبة.
-    """
+        prompt = f"""
+        أنت خبير تسويق رقمي محترف. 
+        قم بكتابة منشور تسويقي مبتكر وجذاب لمنتج: {request.product_name}
+        الجمهور المستهدف: {request.target_audience}
+        شامل الهاشتاجات المناسبة.
+        """
 
-    last_error = None
+        # طلب الموديل المستقر 2.5
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
 
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            return {
-                "success": True, 
-                "model_used": model_name,
-                "result": response.text
-            }
-        except Exception as e:
-            last_error = str(e)
-            continue
+        return {
+            "success": True, 
+            "result": response.text
+        }
 
-    raise HTTPException(status_code=500, detail=f"فشلت كافة المحاولات. آخر خطأ: {last_error}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"API Error: {str(e)}")
