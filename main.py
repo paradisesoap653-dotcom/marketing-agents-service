@@ -1,11 +1,15 @@
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from crewai import Agent, Task, Crew, Process, LLM
 
 app = FastAPI(title="Marketing Agents Service")
 
-# نموذج لاستقبال البيانات
+# executor لتشغيل CrewAI في الخلفية بدون تجميد السيرفر
+executor = ThreadPoolExecutor(max_workers=3)
+
 class CampaignRequest(BaseModel):
     product_name: str
     target_audience: str
@@ -14,40 +18,48 @@ class CampaignRequest(BaseModel):
 def home():
     return {"status": "Marketing Agents Service is running online!"}
 
+def execute_crew(product_name: str, target_audience: str):
+    # إعداد موديل Gemini باستخدام الصيغة الأكثر استقراراً مع LiteLLM
+    gemini_llm = LLM(
+        model="gemini/gemini-1.5-flash",
+        api_key=os.getenv("GEMINI_API_KEY")
+    )
+
+    marketer = Agent(
+        role='خبير تسويق رقمي',
+        goal=f'إنشاء خطة تسويقية جذابة لمنتج {product_name}',
+        backstory='أنت خبير محترف في كتابة الحملات الإعلانية وجذب الجمهور المستهدف.',
+        verbose=True,
+        llm=gemini_llm
+    )
+
+    task = Task(
+        description=f'قم بكتابة منشور تسويقي مبتكر لمنتج {product_name} موجه لـ {target_audience}.',
+        expected_output='منشور إعلاني مكتمل وجاهز للنشر مع الهاشتاجات المناسبة.',
+        agent=marketer
+    )
+
+    crew = Crew(
+        agents=[marketer],
+        tasks=[task],
+        process=Process.sequential
+    )
+
+    result = crew.kickoff()
+    return str(result)
+
 @app.post("/run-campaign")
-def run_campaign(request: CampaignRequest):
+async def run_campaign(request: CampaignRequest):
     try:
-        # 1. إعداد نموذج Gemini بالتنسيق الصحيح
-        gemini_llm = LLM(
-            model="gemini/gemini-2.5-flash",
-            api_key=os.getenv("GEMINI_API_KEY")
+        loop = asyncio.get_event_loop()
+        # تشغيل العملية في خلفية السيرفر لمنع Timeout (502)
+        result = await loop.run_in_executor(
+            executor, 
+            execute_crew, 
+            request.product_name, 
+            request.target_audience
         )
-
-        # 2. تعريف وكيل التسويق وتمرير النموذج له
-        marketer = Agent(
-            role='خبير تسويق رقمي',
-            goal=f'إنشاء خطة تسويقية جذابة لمنتج {request.product_name}',
-            backstory='أنت خبير محترف في كتابة الحملات الإعلانية وجذب الجمهور المستهدف.',
-            verbose=True,
-            llm=gemini_llm
-        )
-
-        # 3. تحديد المهمة
-        task = Task(
-            description=f'قم بكتابة منشور تسويقي مبتكر لمنتج {request.product_name} موجه لـ {request.target_audience}.',
-            expected_output='منشور إعلاني مكتمل وجاهز للنشر مع الهاشتاجات المناسبة.',
-            agent=marketer
-        )
-
-        # 4. تشغيل الفريق
-        crew = Crew(
-            agents=[marketer],
-            tasks=[task],
-            process=Process.sequential
-        )
-
-        result = crew.kickoff()
-        return {"success": True, "result": str(result)}
+        return {"success": True, "result": result}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
