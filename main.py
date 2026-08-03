@@ -29,28 +29,15 @@ def run_campaign(request: CampaignRequest):
     شامل الهاشتاجات المناسبة.
     """
 
-    # إضافة البادئة المباشرة models/ المعرفية لـ v1beta
-    candidate_models = [
-        'models/gemini-1.5-flash',
-        'models/gemini-1.5-pro',
-        'models/gemini-2.0-flash'
-    ]
-
-    errors = []
-
-    for model_name in candidate_models:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-            )
-            return {
-                "success": True, 
-                "model_used": model_name,
-                "result": response.text
-            }
-        except Exception as e:
-            errors.append(f"{model_name}: {str(e)}")
-            continue
-
-    raise HTTPException(status_code=500, detail=f"Google API Errors: { ' | '.join(errors) }")
+    try:
+        response = client.models.generate_content(
+            model="models/gemini-2.5-flash",
+            contents=prompt,
+        )
+        return {
+            "success": True,
+            "model_used": "models/gemini-2.5-flash",
+            "result": response.text
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
