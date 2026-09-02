@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from google import genai
 import fal_client
@@ -16,19 +17,14 @@ class CampaignRequest(BaseModel):
 
 
 class VideoAdRequest(BaseModel):
-    image_url: str          # رابط صورة المنتج (لازم يكون رابط عام متاح على الإنترنت)
-    prompt: str              # وصف الحركة/المشهد المطلوب للفيديو
-    duration: str = "5"      # المدة بالثواني (5 أو 10 حسب الموديل)
-    aspect_ratio: str = "9:16"  # 9:16 للـ Reels/Stories أو 16:9 لليوتيوب
+    image_url: str
+    prompt: str
+    duration: str = "5"
+    aspect_ratio: str = "9:16"
 
 
-@app.get("/")
-def home():
-    return {"status": "Service is running perfectly!"}
-
-
-@app.post("/run-campaign")
-def run_campaign(request: CampaignRequest):
+def generate_campaign_text(product_name: str, target_audience: str) -> str:
+    """دالة مشتركة بتولد نص الحملة التسويقية وترجعه نظيف بدون رموز Markdown"""
     if not gemini_api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY غير موجود في متغيرات البيئة.")
 
@@ -36,8 +32,8 @@ def run_campaign(request: CampaignRequest):
 
     prompt = f"""
     أنت خبير تسويق رقمي محترف.
-    قم بكتابة منشور تسويقي مبتكر وجذاب لمنتج: {request.product_name}
-    الجمهور المستهدف: {request.target_audience}
+    قم بكتابة منشور تسويقي مبتكر وجذاب لمنتج: {product_name}
+    الجمهور المستهدف: {target_audience}
     شامل الهاشتاجات المناسبة.
 
     قواعد صارمة للتنسيق (مهم جداً):
@@ -55,18 +51,38 @@ def run_campaign(request: CampaignRequest):
         )
 
         clean_text = response.text
-        clean_text = clean_text.replace("\\n", "\n")  # تحويل \n المكتوبة كنص حرفي إلى سطر جديد فعلي
+        clean_text = clean_text.replace("\\n", "\n")
         clean_text = clean_text.replace("**", "").replace("*", "")
         clean_text = clean_text.replace("### ", "").replace("## ", "").replace("# ", "")
         clean_text = clean_text.strip()
 
-        return {
-            "success": True,
-            "model_used": "gemini-3.6-flash",
-            "result": clean_text
-        }
+        return clean_text
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
+
+
+@app.get("/")
+def home():
+    return {"status": "Service is running perfectly!"}
+
+
+@app.post("/run-campaign")
+def run_campaign(request: CampaignRequest):
+    clean_text = generate_campaign_text(request.product_name, request.target_audience)
+    return {
+        "success": True,
+        "model_used": "gemini-3.6-flash",
+        "result": clean_text
+    }
+
+
+@app.get("/run-campaign-text", response_class=PlainTextResponse)
+def run_campaign_text(product_name: str, target_audience: str):
+    """
+    نفس /run-campaign بالظبط، لكن بيرجع النص كـ plain text خام
+    بدون أي JSON أو رموز \\n ظاهرة — جاهز للنسخ واللصق المباشر.
+    """
+    return generate_campaign_text(product_name, target_audience)
 
 
 @app.post("/generate-video-ad")
@@ -74,7 +90,7 @@ def generate_video_ad(request: VideoAdRequest):
     if not fal_api_key:
         raise HTTPException(status_code=500, detail="FAL_KEY غير موجود في متغيرات البيئة.")
 
-    os.environ["FAL_KEY"] = fal_api_key  # مكتبة fal_client بتقرأ المفتاح من متغير البيئة مباشرة
+    os.environ["FAL_KEY"] = fal_api_key
 
     try:
         result = fal_client.subscribe(
