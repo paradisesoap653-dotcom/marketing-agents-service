@@ -48,7 +48,8 @@ def run_campaign(request: CampaignRequest):
         )
         return {
             "success": True,
-            "model_used": "gemini-2.5-flash",
+            "model_used": "gemini-3.6-flash",
+            model="gemini-3.6-flash",
             "result": response.text
         }
     except Exception as e:
