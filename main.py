@@ -43,13 +43,12 @@ def run_campaign(request: CampaignRequest):
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
             contents=prompt,
         )
         return {
             "success": True,
             "model_used": "gemini-3.6-flash",
-            model="gemini-3.6-flash",
             "result": response.text
         }
     except Exception as e:
